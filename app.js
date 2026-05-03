@@ -5,14 +5,13 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exe';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
 const FOTO_CALIDAD = 0.85;
 
 // ---- ESTADO GLOBAL ----
-let tecnico = '';
 let visitas = [];
 let visitaActual = null;   // objeto con todos los datos del expediente
 let checkItems = [];       // [{label, marcado: true|false}]
@@ -21,19 +20,14 @@ let planoFile = null;      // {dataUrl, nombre, mime, esPDF}
 let alcantFotos = [];      // [{dataUrl, nombre, mime}]
 
 // ======================================================
-// LOGIN
+// LOGIN (simplificado: sin selección de técnico)
 // ======================================================
 function entrar() {
-  const sel = document.getElementById('sel-tecnico');
-  if (!sel.value) { alert('Selecciona el técnico'); return; }
-  tecnico = sel.value;
-  document.getElementById('lbl-tecnico').textContent = sel.options[sel.selectedIndex].text;
   mostrarScreen('screen-lista');
   cargarVisitas();
 }
 
 function cerrarSesion() {
-  tecnico = '';
   mostrarScreen('screen-login');
 }
 
@@ -87,8 +81,8 @@ async function cargarVisitas() {
   sinVis.style.display = 'none';
 
   try {
-    const url = `${APPS_SCRIPT_URL}?action=getVisitas&tecnico=${encodeURIComponent(tecnico)}`;
-    const data = await fetchConTimeout(url, 20000);
+    // Usamos JSONP en lugar de fetch para evitar problemas CORS con Apps Script
+    const data = await fetchJSONP(`${APPS_SCRIPT_URL}?action=getVisitas`, 20000);
 
     if (data.ok && data.visitas && data.visitas.length > 0) {
       visitas = data.visitas;
@@ -444,7 +438,6 @@ async function guardarVisita() {
       action: 'guardarVisita',
       numExp: visitaActual.numExp,
       rowIndex: visitaActual.rowIndex,
-      tecnico,
       checklist: checklistTexto,
       observaciones: document.getElementById('txt-observaciones').value.trim(),
       folderId: visitaActual.folderId || '',
@@ -546,6 +539,40 @@ async function fetchConTimeout(url, ms) {
     if (e.name === 'AbortError') throw new Error('Timeout (red lenta o sin respuesta)');
     throw e;
   }
+}
+
+// JSONP — evita problemas CORS con Apps Script en peticiones GET
+function fetchJSONP(url, ms) {
+  return new Promise((resolve, reject) => {
+    const callbackName = 'jsonp_cb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+    const script = document.createElement('script');
+    let timer = null;
+
+    function cleanup() {
+      if (timer) clearTimeout(timer);
+      delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('No se pudo conectar con el servidor (revisa el despliegue del Apps Script)'));
+    };
+
+    timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Timeout (sin respuesta del servidor en ' + (ms/1000) + 's)'));
+    }, ms);
+
+    const sep = url.includes('?') ? '&' : '?';
+    script.src = `${url}${sep}callback=${callbackName}`;
+    document.head.appendChild(script);
+  });
 }
 
 // POST con text/plain para evitar preflight CORS de Apps Script

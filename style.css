@@ -1,17 +1,17 @@
 /* ===========================
    DROC VISITA — ESTILOS v2
-   Colores corporativos: #4A8A80 (azul-verde), #7AADA3 (verde)
+   Colores DROC Visita: #1E3A8A (azul marino), #3B5BBA (azul claro)
    =========================== */
 
 :root {
-  --primary: #4A8A80;
-  --primary-dark: #366b62;
-  --secondary: #7AADA3;
-  --bg: #f4f6f5;
+  --primary: #1E3A8A;
+  --primary-dark: #152970;
+  --secondary: #3B5BBA;
+  --bg: #f2f4f9;
   --card: #ffffff;
-  --text: #1a2a28;
-  --text-sub: #5a7470;
-  --border: #d0e2df;
+  --text: #0f1a2e;
+  --text-sub: #5a6a85;
+  --border: #cdd5e8;
   --danger: #c0392b;
   --warning: #e67e22;
   --ok: #27ae60;
@@ -47,10 +47,11 @@ html, body {
 .login-form {
   width: 100%; max-width: 320px;
   background: var(--card); border-radius: var(--radius);
-  padding: 24px; box-shadow: 0 2px 16px rgba(74,138,128,0.12);
+  padding: 24px; box-shadow: 0 2px 16px rgba(30,58,138,0.12);
   display: flex; flex-direction: column; gap: 12px;
 }
 .login-form label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
+.login-msg { font-size: 14px; color: var(--text-sub); text-align: center; margin: 4px 0 8px; }
 
 /* ===== TOPBAR ===== */
 .topbar {
@@ -102,9 +103,9 @@ html, body {
 .card-vis-meta { display: flex; gap: 8px; flex-wrap: wrap; }
 .tag {
   font-size: 11px; font-weight: 600; padding: 3px 8px;
-  border-radius: 20px; background: #e8f4f2; color: var(--primary);
+  border-radius: 20px; background: #e8edf9; color: var(--primary);
 }
-.tag-mun { background: #e8f4f2; color: var(--primary); }
+.tag-mun { background: #e8edf9; color: var(--primary); }
 .tag-exp { background: #f0f0f0; color: #666; }
 
 .loading-msg { text-align: center; padding: 40px; color: var(--text-sub); }
@@ -224,7 +225,7 @@ select:focus { outline: none; border-color: var(--primary); }
 
 .btn-secondary {
   flex: 1; padding: 10px; border-radius: 8px;
-  background: #e8f4f2; color: var(--primary);
+  background: #e8edf9; color: var(--primary);
   border: 1.5px solid var(--secondary); font-size: 13px; font-weight: 600;
   cursor: pointer;
 }
@@ -234,7 +235,7 @@ select:focus { outline: none; border-color: var(--primary); }
   background: var(--primary); color: white;
   border: none; font-size: 15px; font-weight: 700;
   cursor: pointer; letter-spacing: 0.3px;
-  box-shadow: 0 4px 12px rgba(74,138,128,0.3);
+  box-shadow: 0 4px 12px rgba(30,58,138,0.3);
 }
 .btn-guardar:active { background: var(--primary-dark); }
 .btn-guardar:disabled { background: #aaa; box-shadow: none; cursor: not-allowed; }

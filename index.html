@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>DROC Visita</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4A8A80">
+  <meta name="theme-color" content="#1E3A8A">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DROC Visita">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -22,13 +25,7 @@
       <span class="login-title">DROC Visita</span>
     </div>
     <div class="login-form">
-      <label>Técnico</label>
-      <select id="sel-tecnico">
-        <option value="">-- Selecciona --</option>
-        <option value="joanfe">Juan Felipe (Joanfe)</option>
-        <option value="toni">Toni</option>
-        <option value="maria">Maria</option>
-      </select>
+      <p class="login-msg">Pulsa para acceder a las visitas pendientes</p>
       <button id="btn-entrar" class="btn-primary" onclick="entrar()">ENTRAR</button>
     </div>
   </div>
@@ -39,11 +36,9 @@
   <header class="topbar">
     <div class="topbar-left">
       <span class="topbar-title">Visitas pendientes</span>
-      <span id="lbl-tecnico" class="topbar-sub"></span>
     </div>
     <div class="topbar-right">
       <button class="btn-icon" onclick="cargarVisitas()" title="Actualizar">↻</button>
-      <button class="btn-icon btn-logout" onclick="cerrarSesion()" title="Salir">✕</button>
     </div>
   </header>
 
@@ -156,6 +151,6 @@
   </div>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
