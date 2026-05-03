@@ -5,7 +5,7 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exec';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
@@ -129,6 +129,8 @@ function abrirVisita(idx) {
   construirChecklist();
   configurarFlags();
   mostrarScreen('screen-visita');
+  // Inicializar canvas firma cuando ya está visible (necesita medir tamaño real)
+  setTimeout(() => inicializarFirma(), 100);
 }
 
 function resetDatosVisita() {
@@ -142,6 +144,15 @@ function resetDatosVisita() {
   document.getElementById('txt-observaciones').value = '';
   document.getElementById('msg-error').style.display = 'none';
   document.getElementById('btn-add-foto').style.display = '';
+  // Reset dictado por voz si estaba activo
+  if (isRecording) pararDictado();
+  document.getElementById('mic-status').style.display = 'none';
+  document.getElementById('btn-mic').classList.remove('recording');
+  // Reset firma
+  firmaTienenTrazo = false;
+  const placeholder = document.getElementById('firma-placeholder');
+  if (placeholder) placeholder.classList.remove('hidden');
+  // El canvas se limpia al inicializar de nuevo
 }
 
 function rellenarCabecera() {
@@ -445,8 +456,21 @@ async function guardarVisita() {
       flagPlano: parseBool(visitaActual.flagPlano),
       fotos: [],
       plano: null,
-      alcantFotos: []
+      alcantFotos: [],
+      firma: null
     };
+
+    // Firma del cliente (opcional - PNG con fondo transparente)
+    const firmaPNG = obtenerFirmaPNG();
+    if (firmaPNG) {
+      const dirSaneada = sanearNombreArchivo(visitaActual.direccion);
+      const nombreFirma = `${visitaActual.numExp}_Firma titular ${dirSaneada}.png`;
+      payload.firma = {
+        nombre: nombreFirma,
+        data: firmaPNG.split(',')[1],
+        mime: 'image/png'
+      };
+    }
 
     for (let i = 0; i < fotosGeneral.length; i++) {
       const f = fotosGeneral[i];
@@ -595,6 +619,216 @@ async function fetchPOST(url, body, ms) {
     if (e.name === 'AbortError') throw new Error('Timeout al subir (los archivos son grandes o la red lenta)');
     throw e;
   }
+}
+
+// ======================================================
+// DICTADO POR VOZ (Web Speech API)
+// ======================================================
+let recognizer = null;
+let isRecording = false;
+
+function tieneSpeechAPI() {
+  return ('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window);
+}
+
+function toggleDictado() {
+  if (!tieneSpeechAPI()) {
+    mostrarMicStatus('Tu navegador no soporta dictado por voz. Prueba en Chrome (Android) o escribe manualmente.', 'error');
+    return;
+  }
+
+  if (isRecording) {
+    pararDictado();
+  } else {
+    iniciarDictado();
+  }
+}
+
+function iniciarDictado() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognizer = new SR();
+  recognizer.lang = 'es-ES';
+  recognizer.continuous = true;
+  recognizer.interimResults = false;
+
+  const textarea = document.getElementById('txt-observaciones');
+  let textoBase = textarea.value;
+  // Asegurar separación con texto previo
+  if (textoBase.length > 0 && !textoBase.endsWith(' ') && !textoBase.endsWith('\n')) {
+    textoBase += ' ';
+  }
+
+  recognizer.onresult = (event) => {
+    let nuevoTexto = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        nuevoTexto += event.results[i][0].transcript;
+      }
+    }
+    if (nuevoTexto) {
+      // Capitalizar primera letra de cada frase nueva
+      nuevoTexto = nuevoTexto.trim();
+      if (nuevoTexto.length > 0) {
+        nuevoTexto = nuevoTexto.charAt(0).toUpperCase() + nuevoTexto.slice(1);
+      }
+      textoBase += (textoBase.length > 0 && !textoBase.endsWith(' ') && !textoBase.endsWith('\n') ? ' ' : '') + nuevoTexto;
+      textarea.value = textoBase;
+      // Auto-scroll al final
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+  };
+
+  recognizer.onerror = (e) => {
+    let msg = 'Error: ' + e.error;
+    if (e.error === 'not-allowed') msg = 'Permiso de micrófono denegado. Habilítalo en los ajustes del navegador.';
+    if (e.error === 'no-speech')   msg = 'No se ha detectado voz. Inténtalo otra vez.';
+    if (e.error === 'network')     msg = 'Sin conexión: el dictado por voz necesita internet.';
+    mostrarMicStatus(msg, 'error');
+    pararDictado();
+  };
+
+  recognizer.onend = () => {
+    if (isRecording) {
+      // Si el reconocedor para solo (timeout), reiniciamos para mantener escucha continua
+      try { recognizer.start(); } catch (err) { pararDictado(); }
+    }
+  };
+
+  try {
+    recognizer.start();
+    isRecording = true;
+    document.getElementById('btn-mic').classList.add('recording');
+    mostrarMicStatus('🔴 Grabando... Habla con claridad. Pulsa de nuevo el micrófono para parar.', 'recording');
+  } catch (e) {
+    mostrarMicStatus('No se pudo iniciar el micrófono: ' + e.message, 'error');
+  }
+}
+
+function pararDictado() {
+  isRecording = false;
+  if (recognizer) {
+    try { recognizer.stop(); } catch (e) {}
+    recognizer = null;
+  }
+  document.getElementById('btn-mic').classList.remove('recording');
+  // Ocultar status tras 3 segundos
+  setTimeout(() => {
+    const s = document.getElementById('mic-status');
+    if (s && !s.classList.contains('error')) s.style.display = 'none';
+  }, 3000);
+}
+
+function mostrarMicStatus(msg, tipo) {
+  const s = document.getElementById('mic-status');
+  s.textContent = msg;
+  s.className = 'mic-status ' + (tipo || '');
+  s.style.display = '';
+}
+
+// ======================================================
+// FIRMA DEL CLIENTE (Canvas)
+// ======================================================
+let firmaCtx = null;
+let firmaDibujando = false;
+let firmaTienenTrazo = false;
+let firmaUltimoX = 0;
+let firmaUltimoY = 0;
+
+function inicializarFirma() {
+  const canvas = document.getElementById('canvas-firma');
+  if (!canvas) return;
+
+  // Ajustar resolución del canvas a su tamaño real (HiDPI)
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+
+  firmaCtx = canvas.getContext('2d');
+  firmaCtx.scale(dpr, dpr);
+  firmaCtx.lineWidth = 2.2;
+  firmaCtx.lineCap = 'round';
+  firmaCtx.lineJoin = 'round';
+  firmaCtx.strokeStyle = '#000000';
+
+  // Eventos: pointer events cubren mouse, táctil y stylus a la vez
+  canvas.addEventListener('pointerdown', firmaInicioTrazo);
+  canvas.addEventListener('pointermove', firmaMoverTrazo);
+  canvas.addEventListener('pointerup',   firmaFinTrazo);
+  canvas.addEventListener('pointercancel', firmaFinTrazo);
+  canvas.addEventListener('pointerleave',  firmaFinTrazo);
+}
+
+function firmaCoords(e) {
+  const canvas = document.getElementById('canvas-firma');
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+}
+
+function firmaInicioTrazo(e) {
+  e.preventDefault();
+  firmaDibujando = true;
+  const p = firmaCoords(e);
+  firmaUltimoX = p.x;
+  firmaUltimoY = p.y;
+  // Ocultar el placeholder al primer trazo
+  if (!firmaTienenTrazo) {
+    document.getElementById('firma-placeholder').classList.add('hidden');
+    firmaTienenTrazo = true;
+  }
+}
+
+function firmaMoverTrazo(e) {
+  if (!firmaDibujando) return;
+  e.preventDefault();
+  const p = firmaCoords(e);
+  firmaCtx.beginPath();
+  firmaCtx.moveTo(firmaUltimoX, firmaUltimoY);
+  firmaCtx.lineTo(p.x, p.y);
+  firmaCtx.stroke();
+  firmaUltimoX = p.x;
+  firmaUltimoY = p.y;
+}
+
+function firmaFinTrazo() {
+  firmaDibujando = false;
+}
+
+function borrarFirma() {
+  const canvas = document.getElementById('canvas-firma');
+  if (!canvas || !firmaCtx) return;
+  firmaCtx.clearRect(0, 0, canvas.width, canvas.height);
+  firmaTienenTrazo = false;
+  document.getElementById('firma-placeholder').classList.remove('hidden');
+}
+
+// Devuelve PNG con fondo TRANSPARENTE (solo trazos), o null si no hay firma
+function obtenerFirmaPNG() {
+  if (!firmaTienenTrazo) return null;
+  const canvas = document.getElementById('canvas-firma');
+  return canvas.toDataURL('image/png');  // canvas ya es transparente por defecto
+}
+
+// Inicializar la firma cuando se abre una visita (canvas necesita estar visible primero)
+// Llamamos también desde abrirVisita
+window.addEventListener('load', () => {
+  // Inicializar canvas cuando se muestra screen-visita por primera vez
+  // (lo llamaremos desde abrirVisita por si acaso)
+});
+
+// ======================================================
+// SANEAR NOMBRE DE ARCHIVO
+// ======================================================
+function sanearNombreArchivo(s) {
+  return String(s || '')
+    .replace(/[\/\\:*?"<>|]/g, '')   // caracteres no válidos en nombres de archivo
+    .replace(/[,;]/g, '')             // comas y puntos y coma
+    .replace(/\s+/g, ' ')             // espacios múltiples a uno
+    .trim()
+    .slice(0, 100);                   // máximo 100 caracteres
 }
 
 // ======================================================

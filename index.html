@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DROC Visita">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -115,10 +115,29 @@
       <input type="file" id="input-alcant" accept="image/*" capture="environment" multiple style="display:none" onchange="procesarAlcant(this)">
     </section>
 
-    <!-- SECCIÓN: OBSERVACIONES -->
+    <!-- SECCIÓN: OBSERVACIONES (con dictado por voz) -->
     <section class="card">
       <h2>📝 Observaciones</h2>
-      <textarea id="txt-observaciones" rows="5" placeholder="Anota cualquier incidencia, particularidad o deficiencia detectada..."></textarea>
+      <div class="textarea-wrap">
+        <textarea id="txt-observaciones" rows="5" placeholder="Anota cualquier incidencia, particularidad o deficiencia detectada... O pulsa el micrófono para dictar."></textarea>
+        <button type="button" id="btn-mic" class="btn-mic" onclick="toggleDictado()" title="Dictar por voz">
+          <span class="mic-icon">🎤</span>
+        </button>
+      </div>
+      <p id="mic-status" class="mic-status" style="display:none"></p>
+    </section>
+
+    <!-- SECCIÓN: FIRMA DEL CLIENTE (opcional) -->
+    <section class="card">
+      <h2>✍️ Firma del cliente <span class="opt-tag">opcional</span></h2>
+      <p class="nota">Si el cliente está presente, puede firmar conforme se ha realizado la visita.</p>
+      <div class="firma-wrap">
+        <canvas id="canvas-firma" width="600" height="200"></canvas>
+        <div class="firma-placeholder" id="firma-placeholder">Firme aquí con el dedo</div>
+      </div>
+      <div class="btn-row" style="margin-top:8px">
+        <button type="button" class="btn-secondary" onclick="borrarFirma()">🗑️ Borrar firma</button>
+      </div>
     </section>
 
     <!-- BOTÓN GUARDAR -->
@@ -151,6 +170,6 @@
   </div>
 </div>
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
