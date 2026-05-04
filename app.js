@@ -5,7 +5,7 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exec';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
@@ -449,6 +449,12 @@ async function guardarVisita() {
       action: 'guardarVisita',
       numExp: visitaActual.numExp,
       rowIndex: visitaActual.rowIndex,
+      cliente: visitaActual.cliente,
+      direccion: visitaActual.direccion,
+      municipio: visitaActual.municipio,
+      refCatastral: visitaActual.refCatastral,
+      supUtil: visitaActual.supUtil,
+      anyoConstruccion: visitaActual.anyoConstruccion,
       checklist: checklistTexto,
       observaciones: document.getElementById('txt-observaciones').value.trim(),
       folderId: visitaActual.folderId || '',
