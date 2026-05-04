@@ -5,7 +5,7 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exec';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
@@ -104,19 +104,187 @@ function renderLista() {
   cont.innerHTML = '';
   visitas.forEach((v, i) => {
     const card = document.createElement('div');
-    card.className = 'card-visita';
+    const esPendienteAsignar = v.tipo === 'temporal' || (v.numExp && v.numExp.startsWith('TEMP-'));
+    card.className = 'card-visita' + (esPendienteAsignar ? ' card-temporal' : '');
     card.innerHTML = `
       <div class="card-vis-cliente">${esc(v.cliente) || '—'}</div>
       <div class="card-vis-dir">${esc(v.direccion) || '—'}</div>
       <div class="card-vis-meta">
         <span class="tag tag-mun">${esc(v.municipio) || '—'}</span>
-        <span class="tag tag-exp">Exp. ${esc(v.numExp) || '—'}</span>
+        <span class="tag tag-exp">${esPendienteAsignar ? '🔵 ' : ''}Exp. ${esc(v.numExp) || '—'}</span>
         ${v.refCatastral ? `<span class="tag">${esc(v.refCatastral)}</span>` : ''}
       </div>
     `;
     card.onclick = () => abrirVisita(i);
     cont.appendChild(card);
   });
+}
+
+// ======================================================
+// NUEVO EXPEDIENTE (creado desde la app de visitas)
+// ======================================================
+let municipiosCache = null;        // [{nombre, checklistVisita, flagAlcantarillado, flagPlano}, ...]
+let municipioSeleccionado = null;  // objeto del municipio elegido en el formulario
+
+async function abrirNuevoExpediente() {
+  // Reset del formulario
+  document.getElementById('nuevo-cliente').value = '';
+  document.getElementById('nuevo-direccion').value = '';
+  document.getElementById('nuevo-telefono').value = '';
+  document.getElementById('nuevo-email').value = '';
+  document.getElementById('nuevo-catastral').value = '';
+  document.getElementById('nuevo-notas').value = '';
+  document.getElementById('msg-error-nuevo').style.display = 'none';
+  document.getElementById('info-municipio').style.display = 'none';
+  municipioSeleccionado = null;
+
+  mostrarScreen('screen-nuevo');
+
+  // Cargar municipios si no están en caché
+  await cargarMunicipios();
+}
+
+async function cargarMunicipios() {
+  const sel = document.getElementById('nuevo-municipio');
+
+  if (municipiosCache) {
+    rellenarSelectorMunicipios();
+    return;
+  }
+
+  sel.innerHTML = '<option value="">-- Cargando... --</option>';
+  try {
+    const data = await fetchJSONP(`${APPS_SCRIPT_URL}?action=getMunicipios`, 20000);
+    if (data.ok && data.municipios) {
+      municipiosCache = data.municipios;
+      rellenarSelectorMunicipios();
+    } else {
+      throw new Error(data.error || 'Sin municipios');
+    }
+  } catch (e) {
+    sel.innerHTML = '<option value="">⚠️ Error al cargar municipios</option>';
+    document.getElementById('msg-error-nuevo').textContent =
+      'No se pudieron cargar los municipios: ' + e.message + '. Comprueba la conexión.';
+    document.getElementById('msg-error-nuevo').style.display = '';
+  }
+}
+
+function rellenarSelectorMunicipios() {
+  const sel = document.getElementById('nuevo-municipio');
+  sel.innerHTML = '<option value="">-- Selecciona municipio --</option>';
+  municipiosCache.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.nombre;
+    opt.textContent = m.nombre;
+    sel.appendChild(opt);
+  });
+}
+
+function onCambiaMunicipio() {
+  const nombre = document.getElementById('nuevo-municipio').value;
+  const info = document.getElementById('info-municipio');
+  const detalles = document.getElementById('info-municipio-detalles');
+
+  if (!nombre || !municipiosCache) {
+    info.style.display = 'none';
+    municipioSeleccionado = null;
+    return;
+  }
+
+  municipioSeleccionado = municipiosCache.find(m => m.nombre === nombre);
+  if (!municipioSeleccionado) {
+    info.style.display = 'none';
+    return;
+  }
+
+  // Mostrar resumen
+  detalles.innerHTML = '';
+  const numItems = (municipioSeleccionado.checklistVisita || '').split('\n').filter(s => s.trim()).length;
+  const items = [
+    `${numItems} items en el checklist de visita`,
+    municipioSeleccionado.flagPlano ? '📐 Pide plano/croquis' : '',
+    municipioSeleccionado.flagAlcantarillado ? '💧 Pide certificado de alcantarillado (2 fotos)' : ''
+  ].filter(Boolean);
+  items.forEach(t => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    detalles.appendChild(li);
+  });
+  info.style.display = '';
+}
+
+function cancelarNuevoExpediente() {
+  mostrarScreen('screen-lista');
+}
+
+async function crearYEmpezarVisita() {
+  const cliente = document.getElementById('nuevo-cliente').value.trim();
+  const direccion = document.getElementById('nuevo-direccion').value.trim();
+  const telefono = document.getElementById('nuevo-telefono').value.trim();
+  const email = document.getElementById('nuevo-email').value.trim();
+  const catastral = document.getElementById('nuevo-catastral').value.trim();
+  const notas = document.getElementById('nuevo-notas').value.trim();
+
+  const errores = [];
+  if (!cliente)   errores.push('Falta el nombre del cliente');
+  if (!direccion) errores.push('Falta la dirección');
+  if (!municipioSeleccionado) errores.push('Selecciona un municipio');
+
+  const msgError = document.getElementById('msg-error-nuevo');
+  if (errores.length > 0) {
+    msgError.textContent = errores.join(' · ');
+    msgError.style.display = '';
+    return;
+  }
+  msgError.style.display = 'none';
+
+  // Crear el expediente temporal en el backend
+  const btn = document.getElementById('btn-crear-exp');
+  btn.disabled = true;
+  btn.textContent = 'Creando expediente...';
+
+  try {
+    const payload = {
+      action: 'crearExpedienteTemporal',
+      cliente, direccion, telefono, email,
+      refCatastral: catastral,
+      municipio: municipioSeleccionado.nombre,
+      notas
+    };
+
+    const result = await fetchPOST(APPS_SCRIPT_URL, payload, 60000);
+
+    if (!result.ok) throw new Error(result.error || 'Error desconocido');
+
+    // Construir el objeto visita en el cliente (para abrirla directamente)
+    const nuevaVisita = {
+      rowIndex:           result.rowIndex,
+      numExp:             result.numExp,           // TEMP-XXX
+      cliente,
+      direccion,
+      municipio:          municipioSeleccionado.nombre,
+      refCatastral:       catastral,
+      supUtil:            '',
+      anyoConstruccion:   '',
+      folderId:           result.folderId || '',   // de _PENDIENTES_ASIGNAR/TEMP-XXX/
+      checklist:          municipioSeleccionado.checklistVisita || '',
+      flagAlcantarillado: municipioSeleccionado.flagAlcantarillado ? 'TRUE' : 'FALSE',
+      flagPlano:          municipioSeleccionado.flagPlano ? 'TRUE' : 'FALSE',
+      tipo:               'temporal'
+    };
+
+    // Añadir al array y abrir
+    visitas.push(nuevaVisita);
+    btn.disabled = false;
+    btn.textContent = '✔ CREAR Y EMPEZAR VISITA';
+    abrirVisita(visitas.length - 1);
+
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '✔ CREAR Y EMPEZAR VISITA';
+    msgError.textContent = 'Error al crear el expediente: ' + e.message;
+    msgError.style.display = '';
+  }
 }
 
 // ======================================================

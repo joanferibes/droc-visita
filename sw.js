@@ -1,7 +1,7 @@
 // SW — DROC Visita v3
 // IMPORTANTE: cachea solo recursos estáticos (CSS, iconos, manifest)
 // El HTML y JS NUNCA se cachean para que los cambios se apliquen al instante
-const CACHE = 'droc-visita-v5';
+const CACHE = 'droc-visita-v6';
 const FILES_ESTATICOS = [
   '/droc-visita/style.css',
   '/droc-visita/manifest.json',

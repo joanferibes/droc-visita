@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DROC Visita">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -42,6 +42,12 @@
     </div>
   </header>
 
+  <div class="acciones-lista">
+    <button class="btn-nuevo-exp" onclick="abrirNuevoExpediente()">
+      ➕ Nuevo expediente
+    </button>
+  </div>
+
   <div id="lista-visitas" class="lista-container">
     <div class="loading-msg">Cargando visitas...</div>
   </div>
@@ -49,6 +55,75 @@
   <div id="sin-visitas" class="sin-visitas" style="display:none">
     <span>✔</span>
     <p>No hay visitas pendientes</p>
+  </div>
+</div>
+
+<!-- ===================== PANTALLA: NUEVO EXPEDIENTE ===================== -->
+<div id="screen-nuevo" class="screen">
+  <header class="topbar">
+    <button class="btn-back" onclick="cancelarNuevoExpediente()">← Cancelar</button>
+    <div class="topbar-center">
+      <span class="topbar-title">Nuevo expediente</span>
+      <span class="topbar-sub">Sin asignar carpeta todavía</span>
+    </div>
+  </header>
+
+  <div class="visita-body">
+    <section class="card">
+      <h2>📋 Datos del expediente</h2>
+      <p class="nota">Rellena lo que sepas en este momento. La oficina completará el resto al asignar la carpeta del expediente.</p>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label>Cliente *</label>
+          <input type="text" id="nuevo-cliente" placeholder="Nombre y apellidos">
+        </div>
+
+        <div class="form-row">
+          <label>Dirección del inmueble *</label>
+          <input type="text" id="nuevo-direccion" placeholder="C/ Ejemplo, 12, 1º">
+        </div>
+
+        <div class="form-row">
+          <label>Municipio *</label>
+          <select id="nuevo-municipio" onchange="onCambiaMunicipio()">
+            <option value="">-- Cargando municipios... --</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label>Teléfono</label>
+          <input type="tel" id="nuevo-telefono" placeholder="600 000 000">
+        </div>
+
+        <div class="form-row">
+          <label>Email</label>
+          <input type="email" id="nuevo-email" placeholder="cliente@email.com">
+        </div>
+
+        <div class="form-row">
+          <label>Ref. catastral</label>
+          <input type="text" id="nuevo-catastral" placeholder="14 dígitos (si la tienes)">
+        </div>
+
+        <div class="form-row">
+          <label>Notas iniciales</label>
+          <textarea id="nuevo-notas" rows="3" placeholder="Cualquier dato relevante: cómo te han contactado, qué necesitan, etc."></textarea>
+        </div>
+      </div>
+
+      <div id="info-municipio" class="info-municipio" style="display:none">
+        <p><strong>Configuración del municipio:</strong></p>
+        <ul id="info-municipio-detalles"></ul>
+      </div>
+    </section>
+
+    <div class="guardar-wrap">
+      <div id="msg-error-nuevo" class="msg-error" style="display:none"></div>
+      <button id="btn-crear-exp" class="btn-guardar" onclick="crearYEmpezarVisita()">
+        ✔ CREAR Y EMPEZAR VISITA
+      </button>
+    </div>
   </div>
 </div>
 
@@ -170,6 +245,6 @@
   </div>
 </div>
 
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

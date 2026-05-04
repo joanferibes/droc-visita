@@ -89,6 +89,46 @@ html, body {
 /* ===== LISTA VISITAS ===== */
 .lista-container { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
 
+/* ===== ACCIONES LISTA (nuevo expediente) ===== */
+.acciones-lista {
+  padding: 12px 12px 0;
+}
+.btn-nuevo-exp {
+  width: 100%; padding: 14px;
+  background: var(--secondary); color: white;
+  border: none; border-radius: 10px;
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(59,91,186,0.25);
+}
+.btn-nuevo-exp:active { background: var(--primary); }
+
+/* ===== FORMULARIO NUEVO EXPEDIENTE ===== */
+.form-grid { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.form-row { display: flex; flex-direction: column; gap: 4px; }
+.form-row label {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-sub); text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.form-row input, .form-row select, .form-row textarea {
+  padding: 10px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border); font-size: 14px;
+  background: white; color: var(--text);
+  font-family: inherit;
+}
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+  outline: none; border-color: var(--primary);
+}
+.info-municipio {
+  margin-top: 16px; padding: 12px;
+  background: #e8edf9; border-radius: 8px;
+  border-left: 3px solid var(--primary);
+}
+.info-municipio p { font-size: 13px; color: var(--primary); margin-bottom: 6px; }
+.info-municipio ul { font-size: 12px; color: var(--text); margin-left: 20px; }
+.info-municipio li { margin-bottom: 2px; }
+
 .card-visita {
   background: var(--card); border-radius: var(--radius);
   padding: 16px; cursor: pointer;
@@ -97,6 +137,10 @@ html, body {
   transition: transform 0.1s;
 }
 .card-visita:active { transform: scale(0.98); }
+.card-visita.card-temporal {
+  border-left-color: var(--secondary);
+  background: linear-gradient(to right, #f0f4ff 0%, white 100%);
+}
 
 .card-vis-cliente { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .card-vis-dir { font-size: 13px; color: var(--text-sub); margin-bottom: 8px; }
