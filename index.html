@@ -13,29 +13,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DROC Visita">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
-<!-- ===================== PANTALLA: LOGIN ===================== -->
-<div id="screen-login" class="screen active">
-  <div class="login-wrap">
-    <div class="login-logo">
-      <img src="https://drive.google.com/uc?id=1FL5Xwci4y8iYh046O76ndR1fupN5PlPf" alt="Joanfe Ribes" onerror="this.style.display='none'">
-      <span class="login-title">DROC Visita</span>
-    </div>
-    <div class="login-form">
-      <p class="login-msg">Pulsa para acceder a las visitas pendientes</p>
-      <button id="btn-entrar" class="btn-primary" onclick="entrar()">ENTRAR</button>
-    </div>
-  </div>
-</div>
-
 <!-- ===================== PANTALLA: LISTA VISITAS ===================== -->
-<div id="screen-lista" class="screen">
+<div id="screen-lista" class="screen active">
   <header class="topbar">
     <div class="topbar-left">
-      <span class="topbar-title">Visitas pendientes</span>
+      <span class="topbar-title">📋 DROC Visita</span>
+      <span class="topbar-sub">Visitas pendientes</span>
     </div>
     <div class="topbar-right">
       <button class="btn-icon" onclick="cargarVisitas()" title="Actualizar">↻</button>
@@ -245,6 +232,6 @@
   </div>
 </div>
 
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

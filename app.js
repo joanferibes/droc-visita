@@ -5,7 +5,7 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exec';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
@@ -18,18 +18,14 @@ let checkItems = [];       // [{label, marcado: true|false}]
 let fotosGeneral = [];     // [{dataUrl, nombre, mime}]
 let planoFile = null;      // {dataUrl, nombre, mime, esPDF}
 let alcantFotos = [];      // [{dataUrl, nombre, mime}]
+let municipiosCache = null; // [{nombre, checklistVisita, flagAlcantarillado, flagPlano}, ...]
 
 // ======================================================
-// LOGIN (simplificado: sin selección de técnico)
+// ARRANQUE: cargar visitas al abrir la app
 // ======================================================
-function entrar() {
-  mostrarScreen('screen-lista');
+window.addEventListener('DOMContentLoaded', () => {
   cargarVisitas();
-}
-
-function cerrarSesion() {
-  mostrarScreen('screen-login');
-}
+});
 
 // ======================================================
 // NAVEGACIÓN
@@ -81,21 +77,49 @@ async function cargarVisitas() {
   sinVis.style.display = 'none';
 
   try {
-    // Usamos JSONP en lugar de fetch para evitar problemas CORS con Apps Script
-    const data = await fetchJSONP(`${APPS_SCRIPT_URL}?action=getVisitas`, 20000);
+    // Cargamos visitas y municipios en paralelo (los municipios los necesitamos
+    // para tener checklist y flags al abrir cada visita)
+    const [dataVisitas, dataMunicipios] = await Promise.all([
+      fetchJSONP(`${APPS_SCRIPT_URL}?action=getVisitas`, 20000),
+      fetchJSONP(`${APPS_SCRIPT_URL}?action=getMunicipios`, 20000).catch(() => ({ ok: true, municipios: [] }))
+    ]);
 
-    if (data.ok && data.visitas && data.visitas.length > 0) {
-      visitas = data.visitas;
+    if (dataMunicipios.ok && dataMunicipios.municipios) {
+      municipiosCache = dataMunicipios.municipios;
+    }
+
+    if (dataVisitas.ok && dataVisitas.visitas && dataVisitas.visitas.length > 0) {
+      visitas = dataVisitas.visitas;
+      // Para cada visita, enriquecemos con la config del municipio
+      visitas.forEach(v => enriquecerVisitaConMunicipio(v));
       renderLista();
-    } else if (data.ok) {
+    } else if (dataVisitas.ok) {
       visitas = [];
       cont.innerHTML = '';
       sinVis.style.display = 'flex';
     } else {
-      throw new Error(data.error || 'Respuesta inválida del servidor');
+      throw new Error(dataVisitas.error || 'Respuesta inválida del servidor');
     }
   } catch (e) {
     cont.innerHTML = `<div class="loading-msg" style="color:var(--danger)">Error al cargar: ${esc(e.message)}<br><br><button class="btn-primary" onclick="cargarVisitas()" style="max-width:200px;margin:auto">Reintentar</button></div>`;
+  }
+}
+
+// Añade checklist y flags del municipio al objeto visita
+function enriquecerVisitaConMunicipio(v) {
+  if (!municipiosCache || !v.municipio) return;
+  const muniNorm = String(v.municipio || '').trim().toUpperCase();
+  const muni = municipiosCache.find(m =>
+    String(m.nombre || '').trim().toUpperCase() === muniNorm
+  );
+  if (muni) {
+    v.checklist = muni.checklistVisita || '';
+    v.flagAlcantarillado = muni.flagAlcantarillado ? 'TRUE' : 'FALSE';
+    v.flagPlano = muni.flagPlano ? 'TRUE' : 'FALSE';
+  } else {
+    v.checklist = v.checklist || '';
+    v.flagAlcantarillado = 'FALSE';
+    v.flagPlano = 'FALSE';
   }
 }
 
@@ -104,14 +128,17 @@ function renderLista() {
   cont.innerHTML = '';
   visitas.forEach((v, i) => {
     const card = document.createElement('div');
-    const esPendienteAsignar = v.tipo === 'temporal' || (v.numExp && v.numExp.startsWith('TEMP-'));
+    const esPendienteAsignar = v.tipo === 'temporal' || v.estado === 'Pendiente asignar';
     card.className = 'card-visita' + (esPendienteAsignar ? ' card-temporal' : '');
+    const etiquetaExp = v.numExp
+      ? `Exp. ${esc(v.numExp)}`
+      : '🔵 Sin asignar';
     card.innerHTML = `
       <div class="card-vis-cliente">${esc(v.cliente) || '—'}</div>
       <div class="card-vis-dir">${esc(v.direccion) || '—'}</div>
       <div class="card-vis-meta">
         <span class="tag tag-mun">${esc(v.municipio) || '—'}</span>
-        <span class="tag tag-exp">${esPendienteAsignar ? '🔵 ' : ''}Exp. ${esc(v.numExp) || '—'}</span>
+        <span class="tag tag-exp">${etiquetaExp}</span>
         ${v.refCatastral ? `<span class="tag">${esc(v.refCatastral)}</span>` : ''}
       </div>
     `;
@@ -123,7 +150,6 @@ function renderLista() {
 // ======================================================
 // NUEVO EXPEDIENTE (creado desde la app de visitas)
 // ======================================================
-let municipiosCache = null;        // [{nombre, checklistVisita, flagAlcantarillado, flagPlano}, ...]
 let municipioSeleccionado = null;  // objeto del municipio elegido en el formulario
 
 async function abrirNuevoExpediente() {
@@ -259,14 +285,14 @@ async function crearYEmpezarVisita() {
     // Construir el objeto visita en el cliente (para abrirla directamente)
     const nuevaVisita = {
       rowIndex:           result.rowIndex,
-      numExp:             result.numExp,           // TEMP-XXX
+      numExp:             result.numExp || '',         // todavía sin asignar
       cliente,
       direccion,
       municipio:          municipioSeleccionado.nombre,
       refCatastral:       catastral,
       supUtil:            '',
       anyoConstruccion:   '',
-      folderId:           result.folderId || '',   // de _PENDIENTES_ASIGNAR/TEMP-XXX/
+      folderId:           result.folderId || '',
       checklist:          municipioSeleccionado.checklistVisita || '',
       flagAlcantarillado: municipioSeleccionado.flagAlcantarillado ? 'TRUE' : 'FALSE',
       flagPlano:          municipioSeleccionado.flagPlano ? 'TRUE' : 'FALSE',
@@ -331,7 +357,7 @@ function rellenarCabecera() {
   document.getElementById('vis-catastral').textContent = v.refCatastral || '—';
   document.getElementById('vis-sup').textContent = v.supUtil ? `${v.supUtil} m²` : '—';
   document.getElementById('vis-anyo').textContent = v.anyoConstruccion || '—';
-  document.getElementById('vis-exp').textContent = v.numExp || '—';
+  document.getElementById('vis-exp').textContent = v.numExp || '(sin asignar)';
 }
 
 // ======================================================
@@ -339,7 +365,7 @@ function rellenarCabecera() {
 // ======================================================
 function construirChecklist() {
   const raw = visitaActual.checklist || '';
-  const items = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  const items = partirChecklistTexto(raw);
 
   checkItems = items.map(label => ({ label, marcado: false }));
 
@@ -365,6 +391,56 @@ function construirChecklist() {
   nota.className = 'nota-checklist';
   nota.textContent = 'Marca solo los items correctos. Los no marcados se considerarán pendientes / con observaciones.';
   cont.appendChild(nota);
+}
+
+// Convierte el texto largo del Sheet en items individuales del checklist
+function partirChecklistTexto(texto) {
+  if (!texto) return [];
+  const limpio = String(texto).trim();
+  if (!limpio) return [];
+
+  // Si tiene saltos de línea, los respetamos
+  if (/\r\n|\n/.test(limpio)) {
+    return limpio.split(/\r?\n/).map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  // Si no, partimos por palabras clave de inicio típicas del Sistema DROC
+  const inicios = [
+    'SUMINISTRO ',
+    'REVISAR ',
+    'DORMITORIOS',
+    'DIBUJAR ',
+    'CEE ',
+    'MEDIR ',
+    'COMPROBAR ',
+    'FOTOGRAFÍA ',
+    'FOTOGRAFIA '
+  ];
+
+  const positions = [];
+  const upper = limpio.toUpperCase();
+  for (let i = 0; i < limpio.length; i++) {
+    for (const pref of inicios) {
+      if (upper.substr(i, pref.length) === pref) {
+        // verificar que es inicio de "palabra" (i==0 o el char anterior es espacio)
+        if (i === 0 || /\s/.test(limpio[i - 1])) {
+          positions.push(i);
+          break;
+        }
+      }
+    }
+  }
+
+  if (positions.length === 0) return [limpio];
+
+  const items = [];
+  for (let i = 0; i < positions.length; i++) {
+    const start = positions[i];
+    const end   = (i + 1 < positions.length) ? positions[i + 1] : limpio.length;
+    const item  = limpio.substring(start, end).trim();
+    if (item.length > 0) items.push(item);
+  }
+  return items;
 }
 
 function toggleCheck(i) {
@@ -563,7 +639,7 @@ function crearThumb(dataUrl, contenedor, onDelete) {
 // ======================================================
 function generarNombreArchivo(sufijo, extension) {
   const v = visitaActual;
-  const prefix = v.numExp || '000000';
+  const prefix = v.numExp || 'SIN_NUM';
   return `${prefix}_${sufijo}.${extension}`;
 }
 
@@ -638,7 +714,8 @@ async function guardarVisita() {
     const firmaPNG = obtenerFirmaPNG();
     if (firmaPNG) {
       const dirSaneada = sanearNombreArchivo(visitaActual.direccion);
-      const nombreFirma = `${visitaActual.numExp}_Firma titular ${dirSaneada}.png`;
+      const prefijoFirma = visitaActual.numExp ? `${visitaActual.numExp}_` : 'SIN_NUM_';
+      const nombreFirma = `${prefijoFirma}Firma titular ${dirSaneada}.png`;
       payload.firma = {
         nombre: nombreFirma,
         data: firmaPNG.split(',')[1],
