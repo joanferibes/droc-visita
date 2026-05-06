@@ -5,7 +5,7 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exec';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
@@ -128,17 +128,39 @@ function renderLista() {
   cont.innerHTML = '';
   visitas.forEach((v, i) => {
     const card = document.createElement('div');
-    const esPendienteAsignar = v.tipo === 'temporal' || v.estado === 'Pendiente asignar';
-    card.className = 'card-visita' + (esPendienteAsignar ? ' card-temporal' : '');
+
+    // Tipos de visualización:
+    // 'normal'      → expediente con carpeta asignada (azul oscuro normal)
+    // 'temporal'    → carpeta provisional _PENDIENTES_ASIGNAR (azul claro)
+    // 'sin_carpeta' → no tiene carpeta todavía (avisará al intentar guardar)
+    const esTemporal = v.tipo === 'temporal';
+    const sinCarpeta = v.tipo === 'sin_carpeta';
+
+    let claseExtra = '';
+    if (esTemporal)      claseExtra = ' card-temporal';
+    else if (sinCarpeta) claseExtra = ' card-sin-carpeta';
+
+    card.className = 'card-visita' + claseExtra;
+
     const etiquetaExp = v.numExp
       ? `Exp. ${esc(v.numExp)}`
-      : '🔵 Sin asignar';
+      : '🆕 Sin nº';
+
+    // Indicadores de estado del expediente
+    const tagsExtra = [];
+    if (esTemporal) tagsExtra.push('<span class="tag tag-temp">📂 Provisional</span>');
+    if (sinCarpeta) tagsExtra.push('<span class="tag tag-warn">⚠ Sin carpeta</span>');
+    if (v.estado && v.estado !== 'Visita pendiente') {
+      tagsExtra.push(`<span class="tag tag-estado">${esc(v.estado)}</span>`);
+    }
+
     card.innerHTML = `
       <div class="card-vis-cliente">${esc(v.cliente) || '—'}</div>
       <div class="card-vis-dir">${esc(v.direccion) || '—'}</div>
       <div class="card-vis-meta">
         <span class="tag tag-mun">${esc(v.municipio) || '—'}</span>
         <span class="tag tag-exp">${etiquetaExp}</span>
+        ${tagsExtra.join('')}
         ${v.refCatastral ? `<span class="tag">${esc(v.refCatastral)}</span>` : ''}
       </div>
     `;
@@ -318,6 +340,19 @@ async function crearYEmpezarVisita() {
 // ======================================================
 function abrirVisita(idx) {
   visitaActual = visitas[idx];
+
+  // Aviso si el expediente no tiene carpeta Drive asignada todavía
+  if (!visitaActual.folderId) {
+    if (!confirm(
+      'Este expediente todavía no tiene carpeta Drive asignada.\n\n' +
+      'Puedes hacer la visita igualmente, pero al guardar habrá un error.\n' +
+      'Tienes que asignar la carpeta primero desde la app de gestión.\n\n' +
+      '¿Quieres abrirla de todas formas?'
+    )) {
+      return;
+    }
+  }
+
   resetDatosVisita();
   rellenarCabecera();
   construirChecklist();

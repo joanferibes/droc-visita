@@ -150,6 +150,15 @@ html, body {
   border-radius: 20px; background: #e8edf9; color: var(--primary);
 }
 .tag-mun { background: #e8edf9; color: var(--primary); }
+.tag-exp { background: #f0f0f0; color: #555; }
+.tag-temp { background: #fef3c7; color: #92400e; }
+.tag-warn { background: #fee2e2; color: #991b1b; }
+.tag-estado { background: #dbeafe; color: #1e40af; }
+
+.card-visita.card-sin-carpeta {
+  border-left-color: #ef4444;
+  background: linear-gradient(to right, #fef2f2 0%, white 100%);
+}
 .tag-exp { background: #f0f0f0; color: #666; }
 
 .loading-msg { text-align: center; padding: 40px; color: var(--text-sub); }
