@@ -5,7 +5,7 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exec';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
