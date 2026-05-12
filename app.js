@@ -5,7 +5,7 @@
 
 // ---- CONFIGURACIÓN ----
 // IMPORTANTE: sustituye por tu URL de Apps Script al desplegar
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLzzpp5K4FSS61fNveEFQURsp0_pcTwk4DMsVgXD3iVds2H8JLWwQsUp1hlUalMI-X/exec';
+const APPS_SCRIPT_URL = 'TU_URL_APPS_SCRIPT_AQUI';
 
 // Tamaño máximo del lado largo de las fotos (px) al redimensionar
 const FOTO_MAX_LADO = 1600;
@@ -340,19 +340,8 @@ async function crearYEmpezarVisita() {
 // ======================================================
 function abrirVisita(idx) {
   visitaActual = visitas[idx];
-
-  // Aviso si el expediente no tiene carpeta Drive asignada todavía
-  if (!visitaActual.folderId) {
-    if (!confirm(
-      'Este expediente todavía no tiene carpeta Drive asignada.\n\n' +
-      'Puedes hacer la visita igualmente, pero al guardar habrá un error.\n' +
-      'Tienes que asignar la carpeta primero desde la app de gestión.\n\n' +
-      '¿Quieres abrirla de todas formas?'
-    )) {
-      return;
-    }
-  }
-
+  // Si no tiene carpeta asignada, al guardar el backend creará automáticamente
+  // una carpeta provisional en _PENDIENTES_ASIGNAR/ (sin avisos molestos).
   resetDatosVisita();
   rellenarCabecera();
   construirChecklist();
